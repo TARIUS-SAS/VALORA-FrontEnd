@@ -21,7 +21,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.tariusvalora.app"
+    namespace = "com.tarius.tarius_valora"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -35,7 +35,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.tariusvalora.app"
+        applicationId = "com.tarius.tarius_valora"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
