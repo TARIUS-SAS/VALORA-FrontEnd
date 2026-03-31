@@ -169,6 +169,7 @@ class _AddMaterialsScreenState extends State<AddMaterialsScreen> {
     await _repo.updateCosts(
       productId:      widget.product.id!,
       materialsCost:  _materialsCost,
+      laborHours:     _laborHours,
       laborCost:      _laborCost,
       profitPct:      profitPct,
       suggestedPrice: _suggestedPrice,

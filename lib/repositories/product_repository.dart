@@ -38,17 +38,19 @@ class ProductRepository {
   Future<void> delete(String productId) =>
       _db.from('products').delete().eq('id', productId);
 
-  // ── Actualizar costos calculados ──────────────────────────────
+  // ── Actualizar costos — guarda horas Y costo calculado ────────
 
   Future<void> updateCosts({
     required String productId,
     required double materialsCost,
-    required double laborCost,
+    required double laborHours,      // horas decimales (ej: 1.5 = 1h30m)
+    required double laborCost,       // horas × salario
     required double profitPct,
     required double suggestedPrice,
   }) async {
     await _db.from('products').update({
       'materials_cost':  materialsCost,
+      'labor_hours':     laborHours,
       'labor_cost':      laborCost,
       'total_cost':      materialsCost + laborCost,
       'profit_pct':      profitPct,

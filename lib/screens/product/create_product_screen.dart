@@ -19,7 +19,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
   final _formKey  = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
-  final _laborCtrl= TextEditingController(text: '0');
+  final _laborCtrl= TextEditingController(text: '00:00');
 
   // Formulario de material
   final _matFormKey       = GlobalKey<FormState>();
@@ -29,6 +29,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
   final _matUsedQtyCtrl   = TextEditingController();
   String _matPurchUnit    = 'kg';
   String _matUsedUnit     = 'g';
+  bool   _hasLeftover     = false; // ¿Sobró material?
 
   final _repo     = ProductRepository();
   final _auth     = AuthRepository();
@@ -49,8 +50,19 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
   double get _materialsCost =>
       _materials.fold(0.0, (s, m) => s + m.actualCost);
 
-  double get _laborCost =>
-      double.tryParse(_laborCtrl.text.replaceAll(',', '.')) ?? 0.0;
+  /// Parsea HH:MM y retorna horas decimales
+  double get _laborHours {
+    final text = _laborCtrl.text.trim();
+    if (text.contains(':')) {
+      final parts = text.split(':');
+      final h = double.tryParse(parts[0]) ?? 0;
+      final m = parts.length > 1 ? (double.tryParse(parts[1]) ?? 0) : 0;
+      return h + m / 60;
+    }
+    return double.tryParse(text) ?? 0;
+  }
+
+  double get _laborCost => _laborHours * _auth.minWagePerHour;
 
   double get _totalCost => _materialsCost + _laborCost;
 
@@ -67,17 +79,31 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
     final name  = _matNameCtrl.text.trim();
     final pQty  = double.tryParse(_matPurchQtyCtrl.text.replaceAll(',', '.'));
     final pCost = double.tryParse(_matPurchCostCtrl.text.replaceAll(',', '.'));
-    final uQty  = double.tryParse(_matUsedQtyCtrl.text.replaceAll(',', '.'));
-    if (name.isEmpty || pQty == null || pCost == null || uQty == null) return null;
-    if (pQty <= 0 || uQty <= 0) return null;
+    if (name.isEmpty || pQty == null || pCost == null) return null;
+    if (pQty <= 0) return null;
+
+    // Si no sobró: usa toda la cantidad comprada
+    // Si sobró: usa lo que el usuario indicó en el campo
+    double usedQty;
+    String usedUnit;
+    if (!_hasLeftover) {
+      usedQty  = pQty;
+      usedUnit = _matPurchUnit;
+    } else {
+      final uQty = double.tryParse(_matUsedQtyCtrl.text.replaceAll(',', '.'));
+      if (uQty == null || uQty <= 0) return null;
+      usedQty  = uQty;
+      usedUnit = _matUsedUnit;
+    }
+
     return MaterialItem(
       productId:    _savedProduct?.id ?? '',
       name:         name,
       purchaseQty:  pQty,
       purchaseUnit: _matPurchUnit,
       purchaseCost: pCost,
-      usedQty:      uQty,
-      usedUnit:     _matUsedUnit,
+      usedQty:      usedQty,
+      usedUnit:     usedUnit,
     );
   }
 
@@ -90,7 +116,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
     if (_isEdit) {
       _nameCtrl.text   = widget.existing!.name;
       _descCtrl.text   = widget.existing!.description ?? '';
-      _laborCtrl.text  = (widget.existing!.laborCost ?? 0).toStringAsFixed(2);
+      _laborCtrl.text  = widget.existing!.laborHoursFormatted;
       _profitPct       = widget.existing!.profitPct ?? 30.0;
       _savedProduct    = widget.existing;
       _loadMaterials();
@@ -119,6 +145,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
         id:          _savedProduct?.id,
         name:        _nameCtrl.text.trim(),
         description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+        laborHours:  _laborHours,
         laborCost:   _laborCost,
         profitPct:   _profitPct,
         userId:      _auth.currentUser!.id,
@@ -153,14 +180,23 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
     FocusScope.of(context).unfocus();
     setState(() => _savingMaterial = true);
     try {
+      final pQty = double.parse(_matPurchQtyCtrl.text.replaceAll(',', '.'));
+
+      // Si no sobró: usedQty = purchaseQty (costo total = precio pagado)
+      // Si sobró: usedQty = lo que ingresó el usuario
+      final usedQty  = _hasLeftover
+          ? double.parse(_matUsedQtyCtrl.text.replaceAll(',', '.'))
+          : pQty;
+      final usedUnit = _hasLeftover ? _matUsedUnit : _matPurchUnit;
+
       await _repo.addMaterial(MaterialItem(
         productId:    _savedProduct!.id!,
         name:         _matNameCtrl.text.trim(),
-        purchaseQty:  double.parse(_matPurchQtyCtrl.text.replaceAll(',', '.')),
+        purchaseQty:  pQty,
         purchaseUnit: _matPurchUnit,
         purchaseCost: double.parse(_matPurchCostCtrl.text.replaceAll(',', '.')),
-        usedQty:      double.parse(_matUsedQtyCtrl.text.replaceAll(',', '.')),
-        usedUnit:     _matUsedUnit,
+        usedQty:      usedQty,
+        usedUnit:     usedUnit,
       ));
       _matNameCtrl.clear(); _matPurchQtyCtrl.clear();
       _matPurchCostCtrl.clear(); _matUsedQtyCtrl.clear();
@@ -185,6 +221,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
     await _repo.updateCosts(
       productId:      _savedProduct!.id!,
       materialsCost:  _materialsCost,
+      laborHours:     _laborHours,
       laborCost:      _laborCost,
       profitPct:      _profitPct,
       suggestedPrice: _suggestedPrice,
@@ -349,11 +386,56 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                     ),
 
                     const SizedBox(height: 12),
-                    _SubLabel(icon: Icons.science_outlined, text: '¿Cuánto vas a usar en este producto?'),
-                    const SizedBox(height: 8),
 
-                    Row(
-                      children: [
+                    // Switch: ¿Sobró material?
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _hasLeftover
+                            ? AppColors.primary.withOpacity(0.06)
+                            : AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _hasLeftover ? AppColors.primary : AppColors.border,
+                          width: _hasLeftover ? 1.5 : 1.0,
+                        ),
+                      ),
+                      child: Row(children: [
+                        Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('¿Sobró material?',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: _hasLeftover
+                                      ? AppColors.primary
+                                      : AppColors.textPrimary,
+                                )),
+                            Text(
+                              _hasLeftover
+                                  ? 'Indica cuánto usaste en este producto'
+                                  : 'Usé todo lo que compré en este producto',
+                              style: const TextStyle(
+                                  fontSize: 11, color: AppColors.textSecondary),
+                            ),
+                          ],
+                        )),
+                        Switch(
+                          value: _hasLeftover,
+                          onChanged: (v) => setState(() {
+                            _hasLeftover = v;
+                            if (!v) _matUsedQtyCtrl.clear();
+                          }),
+                          activeColor: AppColors.primary,
+                        ),
+                      ]),
+                    ),
+
+                    // Campo de cantidad usada — solo si sobró
+                    if (_hasLeftover) ...[
+                      const SizedBox(height: 10),
+                      Row(children: [
                         Expanded(
                           flex: 2,
                           child: TextFormField(
@@ -362,12 +444,13 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                             textInputAction: TextInputAction.done,
                             onFieldSubmitted: (_) => _addMaterial(),
                             decoration: const InputDecoration(
-                              labelText: 'Cantidad a usar',
+                              labelText: 'Cantidad usada',
                               hintText: 'Ej: 500',
                               prefixIcon: Icon(Icons.colorize_outlined,
                                   size: 18, color: AppColors.textHint),
                             ),
                             validator: (v) {
+                              if (!_hasLeftover) return null;
                               if (v == null || v.isEmpty) return 'Requerido';
                               final d = double.tryParse(v.replaceAll(',', '.'));
                               if (d == null || d <= 0) return 'Mayor a 0';
@@ -386,8 +469,8 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                             onChanged: (v) => setState(() => _matUsedUnit = v),
                           ),
                         ),
-                      ],
-                    ),
+                      ]),
+                    ],
 
                     // Preview cálculo en tiempo real
                     if (preview != null) ...[
@@ -446,15 +529,59 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
               icon: Icons.engineering_outlined,
               locked: _savedProduct == null,
               lockedMsg: 'Guarda el nombre del producto primero',
-              child: TextFormField(
-                controller: _laborCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Costo de mano de obra (\$)',
-                  helperText: 'Tu tiempo, fabricación, ensamble, acabados…',
-                  prefixIcon: Icon(Icons.person_outline, size: 18, color: AppColors.textHint),
-                ),
-                onChanged: (_) => _syncCosts(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Campo HH:MM
+                  TextFormField(
+                    controller: _laborCtrl,
+                    keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.done,
+                    decoration: const InputDecoration(
+                      labelText: 'Tiempo invertido (HH:MM)',
+                      hintText: '01:30',
+                      helperText: 'Ejemplo: 01:30 = 1 hora 30 minutos',
+                      prefixIcon: Icon(Icons.access_time_outlined,
+                          size: 18, color: AppColors.textHint),
+                    ),
+                    onChanged: (_) { setState(() {}); _syncCosts(); },
+                  ),
+
+                  // Cálculo automático
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6B6BE8).withOpacity(0.07),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF6B6BE8).withOpacity(0.25)),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.calculate_outlined,
+                          color: Color(0xFF6B6BE8), size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${_laborHours.toStringAsFixed(2)} horas  ×  \$${_auth.minWagePerHour.toStringAsFixed(2)}/hora',
+                            style: const TextStyle(
+                                fontSize: 12, color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text('Costo de mano de obra:',
+                              style: TextStyle(
+                                  fontSize: 12, color: AppColors.textSecondary)),
+                        ],
+                      )),
+                      Text('\$${_laborCost.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF6B6BE8))),
+                    ]),
+                  ),
+                ],
               ),
             ),
 
