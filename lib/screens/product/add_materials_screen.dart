@@ -25,13 +25,11 @@ class _AddMaterialsScreenState extends State<AddMaterialsScreen> {
   final _purchaseCostCtrl=TextEditingController();
   final _usedQtyCtrl    = TextEditingController();
 
-  // Mano de obra
-  final _hoursCtrl   = TextEditingController(text: '0');
-  final _minutesCtrl = TextEditingController(text: '0');
-  final _wageCtrl    = TextEditingController();
+  // Mano de obra — un solo campo HH:MM
+  final _hoursCtrl = TextEditingController(text: '00:00');
 
-  String _purchaseUnit = 'unidad';
-  String _usedUnit     = 'unidad';
+  String _purchaseUnit = 'Unidad';
+  String _usedUnit     = 'Unidad';
 
   bool _loadingList = true;
   bool _saving      = false;
@@ -41,15 +39,25 @@ class _AddMaterialsScreenState extends State<AddMaterialsScreen> {
 
   // ── Accesores de moneda y salario ────────────────────────────
   String get _sym   => _authRepo.currencySymbol;
-  double get _wage  => double.tryParse(_wageCtrl.text.replaceAll(',', '.')) ?? _authRepo.minWagePerHour;
+  double get _wage  => _authRepo.minWagePerHour;
 
   // ── Cálculos ─────────────────────────────────────────────────
   double get _materialsCost =>
       _materials.fold(0.0, (s, m) => s + m.actualCost);
 
-  double get _laborHours =>
-      (double.tryParse(_hoursCtrl.text) ?? 0) +
-      (double.tryParse(_minutesCtrl.text) ?? 0) / 60;
+  /// Parsea el campo HH:MM y retorna horas decimales.
+  /// Ejemplos: "01:30" → 1.5,  "2:00" → 2.0,  "0:45" → 0.75
+  double get _laborHours {
+    final text = _hoursCtrl.text.trim();
+    if (text.contains(':')) {
+      final parts = text.split(':');
+      final h = double.tryParse(parts[0]) ?? 0;
+      final m = parts.length > 1 ? (double.tryParse(parts[1]) ?? 0) : 0;
+      return h + m / 60;
+    }
+    // Si el usuario escribe solo un número, lo trata como horas
+    return double.tryParse(text) ?? 0;
+  }
 
   double get _laborCost => _laborHours * _wage;
 
@@ -83,10 +91,7 @@ class _AddMaterialsScreenState extends State<AddMaterialsScreen> {
         ? (widget.product.suggestedPrice! - widget.product.totalCost!)
             .clamp(0, double.infinity)
         : 0;
-    _wageCtrl.text = _authRepo.minWagePerHour.toStringAsFixed(2);
     _hoursCtrl.addListener(() => setState(() {}));
-    _minutesCtrl.addListener(() => setState(() {}));
-    _wageCtrl.addListener(() => setState(() {}));
     for (final c in [_matNameCtrl, _purchaseQtyCtrl, _purchaseCostCtrl, _usedQtyCtrl]) {
       c.addListener(() => setState(() {}));
     }
@@ -97,7 +102,7 @@ class _AddMaterialsScreenState extends State<AddMaterialsScreen> {
   void dispose() {
     _matNameCtrl.dispose(); _purchaseQtyCtrl.dispose();
     _purchaseCostCtrl.dispose(); _usedQtyCtrl.dispose();
-    _hoursCtrl.dispose(); _minutesCtrl.dispose(); _wageCtrl.dispose();
+    _hoursCtrl.dispose();
     super.dispose();
   }
 
@@ -330,7 +335,7 @@ class _AddMaterialsScreenState extends State<AddMaterialsScreen> {
                             const SizedBox(width: 8),
                             const Expanded(
                               child: Text(
-                                '"Al gusto" y "a discreción" no afectan el costo. El material queda registrado como referencia.',
+                                'Las unidades "Al gusto", "Gota" y "Pizca" no afectan el costo. El material queda registrado como referencia.',
                                 style: TextStyle(fontSize: 11, color: AppColors.primary),
                               ),
                             ),
@@ -378,88 +383,53 @@ class _AddMaterialsScreenState extends State<AddMaterialsScreen> {
 
             const SizedBox(height: 16),
 
-            // ══ 3. MANO DE OBRA POR HORAS ══════════════════════
-            _SectionCard(title: 'Tu tiempo de trabajo', icon: Icons.schedule_outlined,
+            // ══ 3. COSTO DE MANO DE OBRA ════════════════════════
+            _SectionCard(title: 'Costo de mano de obra', icon: Icons.engineering_outlined,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Salario por hora editable
+                  // Campo único HH:MM
                   TextFormField(
-                    controller: _wageCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(
-                      labelText: 'Tu pago por hora ($_sym)',
-                      helperText: 'Viene del salario mínimo de tu país. Puedes cambiarlo.',
-                      prefixIcon: const Icon(Icons.monetization_on_outlined, size: 18, color: AppColors.textHint),
+                    controller: _hoursCtrl,
+                    keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.done,
+                    decoration: const InputDecoration(
+                      labelText: 'Tiempo invertido (HH:MM)',
+                      hintText: '01:30',
+                      helperText: 'Ejemplo: 01:30 = 1 hora 30 minutos',
+                      prefixIcon: Icon(Icons.access_time_outlined, size: 18, color: AppColors.textHint),
                     ),
                     onChanged: (_) => setState(() {}),
                   ),
 
-                  const SizedBox(height: 14),
-                  const Text('¿Cuánto tiempo te tomó hacerlo?',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                  const SizedBox(height: 8),
-
-                  Row(children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _hoursCtrl,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Horas',
-                          hintText: '0',
-                          prefixIcon: Icon(Icons.access_time_outlined, size: 18, color: AppColors.textHint),
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
+                  // Cálculo automático
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6B6BE8).withOpacity(0.07),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF6B6BE8).withOpacity(0.25)),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _minutesCtrl,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.done,
-                        decoration: const InputDecoration(
-                          labelText: 'Minutos',
-                          hintText: '0',
-                          prefixIcon: Icon(Icons.timer_outlined, size: 18, color: AppColors.textHint),
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ),
-                  ]),
-
-                  // Resultado del cálculo de mano de obra
-                  if (_laborHours > 0) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF6B6BE8).withOpacity(0.07),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF6B6BE8).withOpacity(0.25)),
-                      ),
-                      child: Row(children: [
-                        const Icon(Icons.engineering_outlined, color: Color(0xFF6B6BE8), size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${_laborHours.toStringAsFixed(2)} horas  ×  $_sym ${_wage.toStringAsFixed(2)}/hora',
-                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                            ),
-                            const SizedBox(height: 2),
-                            Text('Tu mano de obra vale:',
-                                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                          ],
-                        )),
-                        Text('$_sym ${_laborCost.toStringAsFixed(2)}',
-                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF6B6BE8))),
-                      ]),
-                    ),
-                  ],
+                    child: Row(children: [
+                      const Icon(Icons.calculate_outlined, color: Color(0xFF6B6BE8), size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${_laborHours.toStringAsFixed(2)} horas  ×  $_sym ${_authRepo.minWagePerHour.toStringAsFixed(2)}/hora',
+                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text('Costo de mano de obra:',
+                              style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        ],
+                      )),
+                      Text('$_sym ${_laborCost.toStringAsFixed(2)}',
+                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF6B6BE8))),
+                    ]),
+                  ),
                 ],
               ),
             ),

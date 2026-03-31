@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:tarius_valora/widgets/auth_widgets.dart';
 
 import '../../core/constants.dart';
+import '../../widgets/auth_widgets.dart';
 import '../../core/countries.dart';
 import '../../repositories/auth_repository.dart';
 import '../../widgets/custom_button.dart';
-import 'login_screen.dart' show GradientBg, ValoraLogo, Card, OrDivider;
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -156,7 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const ValoraLogo(),
                   const SizedBox(height: 32),
 
-                  Card(
+                  AuthCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

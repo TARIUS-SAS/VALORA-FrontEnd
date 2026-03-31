@@ -16,7 +16,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _auth = AuthRepository();
   final _sub  = SubscriptionService();
-  final _lang = LangService();
   SubscriptionStatus? _status;
   bool _loadingSub = true;
 
@@ -24,8 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadStatus();
-    // Inicializar idioma desde el perfil del usuario
-    _lang.setFromCountryCode(_auth.countryCode);
+
   }
 
   Future<void> _loadStatus() async {
@@ -71,7 +69,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (country != null) {
       await _auth.updateProfile(country: country);
-      _lang.setFromCountryCode(country.code);
       if (mounted) setState(() {});
     }
   }
@@ -106,37 +103,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _changeLanguage() async {
-    final result = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(l10n.changeLanguage),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: AppL10n.langNames.entries.map((e) {
-            final isSelected = _lang.lang == e.key;
-            return ListTile(
-              title: Text(e.value),
-              leading: Icon(
-                isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                color: isSelected ? AppColors.primary : AppColors.textHint,
-              ),
-              onTap: () => Navigator.pop(context, e.key),
-            );
-          }).toList(),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
-        ],
-      ),
-    );
-    if (result != null) {
-      _lang.setLang(result);
-      // Guardar idioma en Supabase para que persista entre sesiones
-      await _auth.updateProfile(lang: result);
-      if (mounted) setState(() {});
-    }
-  }
 
   Future<void> _editMinWage() async {
     final ctrl = TextEditingController(text: _auth.minWagePerHour.toStringAsFixed(2));
@@ -314,13 +280,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onTap: _changeMeasureSystem,
         ),
 
-        // ── Idioma ────────────────────────────────────────────
-        _SettingsTile(
-          icon: Icons.language_outlined,
-          title: t.language,
-          subtitle: AppL10n.langNames[_lang.lang] ?? 'Español',
-          onTap: _changeLanguage,
-        ),
 
         // ── Salario mínimo ────────────────────────────────────
         _SettingsTile(
