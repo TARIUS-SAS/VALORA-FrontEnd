@@ -16,8 +16,8 @@ class MaterialCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pct     = item.usagePercent;
-    final isOver  = pct > 100;
+    final pct = item.usagePercent;
+    final isOver = pct > 100;
     final barColor = isOver ? AppColors.error : AppColors.accent;
 
     return Container(
@@ -26,9 +26,7 @@ class MaterialCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isOver
-              ? AppColors.error.withOpacity(0.4)
-              : AppColors.border,
+          color: isOver ? AppColors.error.withOpacity(0.4) : AppColors.border,
           width: 1.2,
         ),
         boxShadow: [
@@ -48,7 +46,8 @@ class MaterialCard extends StatelessWidget {
               children: [
                 // Ícono de categoría
                 Container(
-                  width: 38, height: 38,
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.09),
                     borderRadius: BorderRadius.circular(10),
@@ -114,7 +113,8 @@ class MaterialCard extends StatelessWidget {
                   GestureDetector(
                     onTap: onEdit,
                     child: Container(
-                      width: 28, height: 28,
+                      width: 28,
+                      height: 28,
                       decoration: BoxDecoration(
                         color: AppColors.primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(7),
@@ -134,7 +134,8 @@ class MaterialCard extends StatelessWidget {
                   GestureDetector(
                     onTap: onDelete,
                     child: Container(
-                      width: 28, height: 28,
+                      width: 28,
+                      height: 28,
                       decoration: BoxDecoration(
                         color: AppColors.error.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(7),
@@ -181,7 +182,9 @@ class MaterialCard extends StatelessWidget {
                               if (isOver)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: AppColors.error.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(4),
@@ -189,9 +192,10 @@ class MaterialCard extends StatelessWidget {
                                   child: const Text(
                                     'Excede lo comprado',
                                     style: TextStyle(
-                                        fontSize: 9,
-                                        color: AppColors.error,
-                                        fontWeight: FontWeight.w600),
+                                      fontSize: 9,
+                                      color: AppColors.error,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                             ],
@@ -220,8 +224,7 @@ class MaterialCard extends StatelessWidget {
                     _Chip(
                       icon: Icons.shopping_bag_outlined,
                       label: 'Comprado',
-                      value:
-                          '${item.purchaseQty} ${item.purchaseUnit}',
+                      value: '${item.purchaseQty} ${item.purchaseUnit}',
                     ),
                     const SizedBox(width: 6),
                     _Chip(
@@ -233,8 +236,7 @@ class MaterialCard extends StatelessWidget {
                     _Chip(
                       icon: Icons.repeat,
                       label: 'Rinde para',
-                      value:
-                          '${item.batchCount.toStringAsFixed(1)} uds.',
+                      value: '${item.batchCount.toStringAsFixed(1)} uds.',
                       highlight: true,
                     ),
                   ],
@@ -257,63 +259,59 @@ class _Chip extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label, value;
-  final bool     highlight;
+  final String label, value;
+  final bool highlight;
 
   @override
   Widget build(BuildContext context) => Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: highlight
-                ? AppColors.primary.withOpacity(0.07)
-                : AppColors.surface,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: highlight
-                  ? AppColors.primary.withOpacity(0.2)
-                  : AppColors.divider,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: highlight
+            ? AppColors.primary.withOpacity(0.07)
+            : AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: highlight
+              ? AppColors.primary.withOpacity(0.2)
+              : AppColors.divider,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Icon(icon,
-                      size: 10,
-                      color: highlight
-                          ? AppColors.primary
-                          : AppColors.textHint),
-                  const SizedBox(width: 3),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: highlight
-                            ? AppColors.primary
-                            : AppColors.textHint,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+              Icon(
+                icon,
+                size: 10,
+                color: highlight ? AppColors.primary : AppColors.textHint,
               ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: highlight
-                      ? AppColors.primary
-                      : AppColors.textPrimary,
+              const SizedBox(width: 3),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: highlight ? AppColors.primary : AppColors.textHint,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
-        ),
-      );
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: highlight ? AppColors.primary : AppColors.textPrimary,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    ),
+  );
 }
