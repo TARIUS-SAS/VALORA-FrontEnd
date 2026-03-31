@@ -216,6 +216,219 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
     await _syncCosts();
   }
 
+  Future<void> _editMaterial(MaterialItem item) async {
+    final nameCtrl      = TextEditingController(text: item.name);
+    final purchQtyCtrl  = TextEditingController(text: item.purchaseQty.toString());
+    final purchCostCtrl = TextEditingController(text: item.purchaseCost.toString());
+    final usedQtyCtrl   = TextEditingController(text: item.usedQty.toString());
+    String purchUnit    = item.purchaseUnit;
+    String usedUnit     = item.usedUnit;
+    // Si usedQty == purchaseQty y misma unidad → no sobró
+    bool hasLeftover    = !(item.usedQty == item.purchaseQty &&
+                            item.usedUnit == item.purchaseUnit);
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModal) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle
+                Center(child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                      color: AppColors.divider,
+                      borderRadius: BorderRadius.circular(2)),
+                )),
+                const SizedBox(height: 16),
+                const Text('Editar material',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary)),
+                const SizedBox(height: 16),
+
+                // Nombre
+                TextFormField(
+                  controller: nameCtrl,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    labelText: '¿Qué material es?',
+                    prefixIcon: Icon(Icons.category_outlined,
+                        size: 18, color: AppColors.textHint),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Cantidad comprada + unidad
+                Row(children: [
+                  Expanded(flex: 2, child: TextFormField(
+                    controller: purchQtyCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: 'Cantidad comprada',
+                      prefixIcon: Icon(Icons.numbers,
+                          size: 18, color: AppColors.textHint),
+                    ),
+                  )),
+                  const SizedBox(width: 10),
+                  Expanded(flex: 2, child: _UnitDropdown(
+                    label: 'Unidad de compra',
+                    value: purchUnit,
+                    units: _allUnits,
+                    onChanged: (v) => setModal(() => purchUnit = v),
+                  )),
+                ]),
+                const SizedBox(height: 10),
+
+                // Costo
+                TextFormField(
+                  controller: purchCostCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Precio del paquete (\$)',
+                    prefixIcon: Icon(Icons.attach_money,
+                        size: 18, color: AppColors.textHint),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Switch ¿Sobró?
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: hasLeftover
+                        ? AppColors.primary.withOpacity(0.06)
+                        : AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: hasLeftover ? AppColors.primary : AppColors.border,
+                    ),
+                  ),
+                  child: Row(children: [
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('¿Sobró material?',
+                            style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600,
+                              color: hasLeftover
+                                  ? AppColors.primary
+                                  : AppColors.textPrimary,
+                            )),
+                        Text(
+                          hasLeftover
+                              ? 'Indica cuánto usaste en este producto'
+                              : 'Usé todo lo que compré en este producto',
+                          style: const TextStyle(
+                              fontSize: 11, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    )),
+                    Switch(
+                      value: hasLeftover,
+                      onChanged: (v) => setModal(() {
+                        hasLeftover = v;
+                        if (!v) usedQtyCtrl.clear();
+                      }),
+                      activeColor: AppColors.primary,
+                    ),
+                  ]),
+                ),
+
+                // Cantidad usada — solo si sobró
+                if (hasLeftover) ...[
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(flex: 2, child: TextFormField(
+                      controller: usedQtyCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Cantidad usada',
+                        prefixIcon: Icon(Icons.colorize_outlined,
+                            size: 18, color: AppColors.textHint),
+                      ),
+                    )),
+                    const SizedBox(width: 10),
+                    Expanded(flex: 2, child: _UnitDropdown(
+                      label: 'Unidad de uso',
+                      value: usedUnit,
+                      units: _allUnits,
+                      onChanged: (v) => setModal(() => usedUnit = v),
+                    )),
+                  ]),
+                ],
+
+                const SizedBox(height: 20),
+                Row(children: [
+                  Expanded(child: OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Cancelar'),
+                  )),
+                  const SizedBox(width: 12),
+                  Expanded(child: ElevatedButton(
+                    onPressed: () async {
+                      final pQty = double.tryParse(
+                          purchQtyCtrl.text.replaceAll(',', '.')) ?? item.purchaseQty;
+                      final pCost = double.tryParse(
+                          purchCostCtrl.text.replaceAll(',', '.')) ?? item.purchaseCost;
+                      final uQty = hasLeftover
+                          ? (double.tryParse(
+                                  usedQtyCtrl.text.replaceAll(',', '.')) ??
+                              pQty)
+                          : pQty;
+                      final uUnit = hasLeftover ? usedUnit : purchUnit;
+
+                      await _repo.updateMaterial(MaterialItem(
+                        id:           item.id,
+                        productId:    item.productId,
+                        name:         nameCtrl.text.trim().isEmpty
+                            ? item.name
+                            : nameCtrl.text.trim(),
+                        purchaseQty:  pQty,
+                        purchaseUnit: purchUnit,
+                        purchaseCost: pCost,
+                        usedQty:      uQty,
+                        usedUnit:     uUnit,
+                      ));
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      await _loadMaterials();
+                      await _syncCosts();
+                      _showOk('Material actualizado');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Guardar'),
+                  )),
+                ]),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    nameCtrl.dispose();
+    purchQtyCtrl.dispose();
+    purchCostCtrl.dispose();
+    usedQtyCtrl.dispose();
+  }
+
   Future<void> _syncCosts() async {
     if (_savedProduct?.id == null) return;
     await _repo.updateCosts(
@@ -497,6 +710,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                       const SizedBox(height: 8),
                       ..._materials.map((m) => MaterialCard(
                             item: m,
+                            onEdit: () => _editMaterial(m),
                             onDelete: () => _deleteMaterial(m),
                           )),
                       Container(

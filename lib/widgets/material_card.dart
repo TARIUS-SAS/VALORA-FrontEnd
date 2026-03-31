@@ -7,10 +7,12 @@ class MaterialCard extends StatelessWidget {
     super.key,
     required this.item,
     this.onDelete,
+    this.onEdit,
   });
 
   final MaterialItem item;
   final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +107,26 @@ class MaterialCard extends StatelessWidget {
                     ),
                   ],
                 ),
+
+                // Botón editar
+                if (onEdit != null) ...[
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: onEdit,
+                    child: Container(
+                      width: 28, height: 28,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: const Icon(
+                        Icons.edit_outlined,
+                        size: 14,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
 
                 // Botón eliminar
                 if (onDelete != null) ...[

@@ -80,4 +80,21 @@ class ProductRepository {
 
   Future<void> deleteMaterial(String materialId) =>
       _db.from('materials').delete().eq('id', materialId);
+
+  Future<MaterialItem> updateMaterial(MaterialItem item) async {
+    final data = await _db
+        .from('materials')
+        .update({
+          'name':          item.name,
+          'purchase_qty':  item.purchaseQty,
+          'purchase_unit': item.purchaseUnit,
+          'purchase_cost': item.purchaseCost,
+          'used_qty':      item.usedQty,
+          'used_unit':     item.usedUnit,
+        })
+        .eq('id', item.id!)
+        .select()
+        .single();
+    return MaterialItem.fromJson(data);
+  }
 }
