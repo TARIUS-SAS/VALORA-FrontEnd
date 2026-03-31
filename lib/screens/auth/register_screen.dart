@@ -1,19 +1,12 @@
-import 'package:flutter/material.dart' hide Card;
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:tarius_valora/widgets/auth_widgets.dart';
 
 import '../../core/constants.dart';
 import '../../core/countries.dart';
 import '../../repositories/auth_repository.dart';
 import '../../widgets/custom_button.dart';
-import 'login_screen.dart'
-    show
-        GradientBg,
-        ValoraLogo,
-        Card,
-        OrDivider,
-        OrDivider,
-        ValoraLogo,
-        GradientBg;
+import 'login_screen.dart' show GradientBg, ValoraLogo, Card, OrDivider;
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
