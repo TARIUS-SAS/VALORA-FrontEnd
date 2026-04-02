@@ -45,25 +45,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _checkAccess() async {
     try {
-      final status = await SubscriptionService().refresh();
+      final status = await SubscriptionService().refresh()
+          .timeout(const Duration(seconds: 8));
       if (!mounted) return;
-      if (!status.hasAccess) {
-        _goPaywall();
-      }
+      if (!status.hasAccess) _goPaywall();
     } catch (_) {
-      // Sin conexión → dejar seguir usando
+      // Sin red — no hacer nada, el usuario sigue usando
     }
   }
 
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
+      final status = await SubscriptionService().refresh()
+          .timeout(const Duration(seconds: 8));
+
+      debugPrint('=== ACCESO: ${status.hasAccess} | PLAN: ${status.plan} | MINUTOS: ${status.minutesLeft}');
+
+      if (!mounted) return;
+      if (!status.hasAccess) {
+        debugPrint('=== SIN ACCESO → PAYWALL');
+        _goPaywall();
+        return;
+      }
+
       final list = await _productRepo.getAll(_authRepo.currentUser!.id);
+      debugPrint('=== PRODUCTOS CARGADOS: ${list.length}');
       if (mounted) setState(() => _products = list);
+
     } on TrialExpiredException {
+      debugPrint('=== TrialExpiredException → PAYWALL');
       if (mounted) _goPaywall();
-    } catch (_) {
-      if (mounted) _err('Error al cargar productos');
+    } catch (e) {
+      // Cualquier error al verificar → ir al paywall por seguridad
+      debugPrint('=== ERROR _load: $e → PAYWALL');
+      if (mounted) _goPaywall();
     } finally {
       if (mounted) setState(() => _loading = false);
     }

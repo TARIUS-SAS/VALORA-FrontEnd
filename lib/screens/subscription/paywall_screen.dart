@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../core/constants.dart';
+import '../../core/supabase_client.dart';
 import '../../services/api_service.dart';
 import '../../services/subscription_service.dart';
 
@@ -414,6 +415,34 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                 'Ahora no',
                                 style: TextStyle(
                                   fontSize: 14,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
+
+                          // Opción de cambiar cuenta cuando trial venció
+                          if (widget.trialExpired) ...[
+                            const SizedBox(height: 8),
+                            TextButton.icon(
+                              onPressed: () async {
+                                await SupabaseConfig.client.auth.signOut();
+                                if (context.mounted) {
+                                  Navigator.of(context).pushNamedAndRemoveUntil(
+                                    '/login',
+                                    (_) => false,
+                                  );
+                                }
+                              },
+                              icon: const Icon(
+                                Icons.logout_outlined,
+                                size: 16,
+                                color: AppColors.textSecondary,
+                              ),
+                              label: const Text(
+                                'Salir e ingresar con otra cuenta',
+                                style: TextStyle(
+                                  fontSize: 13,
                                   color: AppColors.textSecondary,
                                 ),
                               ),
