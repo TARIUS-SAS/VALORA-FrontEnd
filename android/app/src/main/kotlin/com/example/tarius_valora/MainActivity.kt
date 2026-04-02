@@ -1,4 +1,4 @@
-package com.tarius.tarius_valora
+package com.example.tarius_valora
 
 import io.flutter.embedding.android.FlutterActivity
 
