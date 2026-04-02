@@ -5,6 +5,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/subscription/paywall_screen.dart';
+import 'services/subscription_service.dart';
 
 class ValoraApp extends StatelessWidget {
   const ValoraApp({super.key});
@@ -20,7 +21,8 @@ class ValoraApp extends StatelessWidget {
       title:                     'Valora',
       debugShowCheckedModeBanner: false,
       theme:                     AppTheme.light,
-      home:                      hasSession ? const HomeScreen() : const LoginScreen(),
+      // Si hay sesión activa, primero verifica la suscripción
+      home: hasSession ? const _SplashGate() : const LoginScreen(),
       routes: {
         '/login':    (_) => const LoginScreen(),
         '/home':     (_) => const HomeScreen(),
@@ -61,6 +63,96 @@ class ValoraApp extends StatelessWidget {
         };
         return child ?? const SizedBox.shrink();
       },
+    );
+  }
+}
+
+// ── Splash Gate ───────────────────────────────────────────────
+// Se muestra mientras se verifica la suscripción al arrancar.
+// Evita el parpadeo de pantallas mostrando un loading limpio.
+class _SplashGate extends StatefulWidget {
+  const _SplashGate();
+  @override
+  State<_SplashGate> createState() => _SplashGateState();
+}
+
+class _SplashGateState extends State<_SplashGate> {
+  @override
+  void initState() {
+    super.initState();
+    _checkAccess();
+  }
+
+  Future<void> _checkAccess() async {
+    try {
+      final status = await SubscriptionService().refresh();
+      if (!mounted) return;
+
+      if (status.hasAccess) {
+        // Tiene acceso → Home normal
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      } else {
+        // Trial vencido o sin plan → Paywall bloqueante (sin back)
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => const PaywallScreen(trialExpired: true),
+          ),
+        );
+      }
+    } catch (_) {
+      // Si falla la conexión, dejamos entrar (no bloquear por error de red)
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Loading mientras verifica
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80, height: 80,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF4A90E2), Color(0xFF6B6BE8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF4A90E2).withOpacity(0.35),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Text('V',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(height: 32),
+            const CircularProgressIndicator(
+              color: Color(0xFF4A90E2),
+              strokeWidth: 2,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

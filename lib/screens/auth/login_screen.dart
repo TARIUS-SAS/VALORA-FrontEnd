@@ -41,11 +41,18 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) Navigator.pushReplacementNamed(context, '/home');
 
     } 
-      on AuthException catch (_) {
-      if (mounted) _snack(
-        'Usuario o contraseña incorrectos. Si aún no tienes una cuenta, regístrate para continuar.',
-        isError: true,
-      );
+      on AuthException catch (e) {
+      if (mounted) {
+        final msg = e.message.toLowerCase();
+        if (msg.contains('email not confirmed') || msg.contains('email_not_confirmed')) {
+          _snack('Confirma tu correo electrónico antes de ingresar.', isError: true);
+        } else {
+          _snack(
+            'Usuario o contraseña incorrectos. Si aún no tienes una cuenta, regístrate para continuar.',
+            isError: true,
+          );
+        }
+      }
     } catch (_) {
       if (mounted) _snack(
         'Error de conexión. Verifica tu internet e intenta de nuevo.',

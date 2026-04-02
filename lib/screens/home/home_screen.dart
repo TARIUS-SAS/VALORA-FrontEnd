@@ -3,7 +3,10 @@ import '../../core/constants.dart';
 import '../../models/product.dart';
 import '../../repositories/auth_repository.dart';
 import '../../repositories/product_repository.dart';
+import '../../services/api_service.dart';
+import '../../services/subscription_service.dart';
 import '../product/create_product_screen.dart';
+import '../subscription/paywall_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,7 +15,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _authRepo    = AuthRepository();
   final _productRepo = ProductRepository();
 
@@ -22,7 +25,34 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Re-verificar suscripción cuando el usuario vuelve a la app desde background
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkAccess();
+    }
+  }
+
+  Future<void> _checkAccess() async {
+    try {
+      final status = await SubscriptionService().refresh();
+      if (!mounted) return;
+      if (!status.hasAccess) {
+        _goPaywall();
+      }
+    } catch (_) {
+      // Sin conexión → dejar seguir usando
+    }
   }
 
   Future<void> _load() async {
@@ -30,11 +60,22 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final list = await _productRepo.getAll(_authRepo.currentUser!.id);
       if (mounted) setState(() => _products = list);
+    } on TrialExpiredException {
+      if (mounted) _goPaywall();
     } catch (_) {
       if (mounted) _err('Error al cargar productos');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _goPaywall() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => const PaywallScreen(trialExpired: true),
+      ),
+      (_) => false, // Sin back — el usuario DEBE pagar
+    );
   }
 
   Future<void> _delete(Product p) async {
@@ -125,15 +166,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text('${_products.length} producto${_products.length == 1 ? '' : 's'}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
-                ),
+                // Badge del plan
+                _PlanBadge(),
               ],
             ),
           ),
@@ -166,6 +200,44 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('Nuevo producto',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+}
+
+// ── Badge del plan en el header ───────────────────────────────
+
+class _PlanBadge extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final status = SubscriptionService().status;
+    if (status == null) return const SizedBox.shrink();
+
+    Color color;
+    String label;
+    if (status.isPaid) {
+      color = AppColors.accentDark;
+      label = '✦ Premium';
+    } else if (status.isTrial && status.hasAccess) {
+      final h = (status.minutesLeft ?? 0) ~/ 60;
+      final m = (status.minutesLeft ?? 0) % 60;
+      color = AppColors.warning;
+      label = h > 0 ? 'Trial ${h}h ${m}m' : 'Trial ${status.minutesLeft}min';
+    } else {
+      return const SizedBox.shrink();
+    }
+
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, '/paywall'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Text(label,
+            style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
       ),
     );
   }
@@ -205,7 +277,6 @@ class _ProductTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Nombre + acciones
             Row(
               children: [
                 Container(
@@ -243,8 +314,6 @@ class _ProductTile extends StatelessWidget {
               const SizedBox(height: 12),
               const Divider(color: AppColors.divider, height: 1),
               const SizedBox(height: 12),
-
-              // Stats de costeo
               Row(
                 children: [
                   _Stat('Costo total', '\$${total.toStringAsFixed(2)}', AppColors.textSecondary),
@@ -257,11 +326,11 @@ class _ProductTile extends StatelessWidget {
               ),
             ] else ...[
               const SizedBox(height: 8),
-              Row(
+              const Row(
                 children: [
-                  const Icon(Icons.info_outline, size: 13, color: AppColors.textHint),
-                  const SizedBox(width: 6),
-                  const Text('Toca para agregar materiales y calcular precio',
+                  Icon(Icons.info_outline, size: 13, color: AppColors.textHint),
+                  SizedBox(width: 6),
+                  Text('Toca para agregar materiales y calcular precio',
                       style: TextStyle(fontSize: 11, color: AppColors.textHint)),
                 ],
               ),
