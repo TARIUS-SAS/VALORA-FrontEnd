@@ -44,6 +44,137 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  void _showLegal(BuildContext context, {required bool isTerms}) {
+    final title = isTerms ? 'Términos y condiciones' : 'Política de privacidad';
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (_, controller) => Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(title,
+                        style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView(
+                controller: controller,
+                padding: const EdgeInsets.all(20),
+                children: isTerms ? _termsContent() : _privacyContent(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _termsContent() => [
+    _lp('Última actualización: 02 de abril de 2026 · TARIUS S.A.S · Versión 1.0'),
+    _lh('1. Aceptación'),
+    _lp('Al usar Valora aceptas estos términos. Si no estás de acuerdo, debes abstenerte de usar la aplicación.'),
+    _lh('2. Descripción del servicio'),
+    _lp('Valora es una herramienta para calcular el costo de productos artesanales. Incluye materiales, mano de obra, precio sugerido y gestión de productos.'),
+    _lh('3. Cuenta de usuario'),
+    _lb('Debes proporcionar información veraz al registrarte'),
+    _lb('Eres responsable de la confidencialidad de tu contraseña'),
+    _lb('No puedes compartir tu cuenta con terceros'),
+    _lb('Debes ser mayor de 18 años para usar Valora'),
+    _lh('4. Planes y pagos'),
+    _lp('Al registrarte obtienes un período de prueba gratuita. Al vencer, activa un plan para continuar. Los pagos se procesan a través de Google Play. Las suscripciones se renuevan automáticamente salvo cancelación previa.'),
+    _lh('5. Uso aceptable'),
+    _lb('Prohibido acceder a datos de otros usuarios'),
+    _lb('Prohibida la ingeniería inversa del software'),
+    _lb('Prohibido el uso para actividades ilícitas o fraudulentas'),
+    _lh('6. Propiedad intelectual'),
+    _lp('Todos los derechos sobre Valora son propiedad exclusiva de TARIUS S.A.S. Prohibida su reproducción sin autorización escrita.'),
+    _lh('7. Limitación de responsabilidad'),
+    _lp('Valora proporciona cálculos orientativos. TARIUS S.A.S no garantiza que los precios sugeridos sean óptimos para cada mercado.'),
+    _lh('8. Ley aplicable'),
+    _lp('Estos términos se rigen por las leyes de Colombia.'),
+    _lh('9. Contacto'),
+    _lp('privacidad@tarius.com · © 2026 TARIUS S.A.S'),
+    const SizedBox(height: 40),
+  ];
+
+  List<Widget> _privacyContent() => [
+    _lp('Última actualización: 02 de abril de 2026 · TARIUS S.A.S · Versión 1.0'),
+    _lh('1. Responsable'),
+    _lp('TARIUS S.A.S — privacidad@tarius.com — Colombia'),
+    _lh('2. Normatividad'),
+    _lb('Ley 1581 de 2012 — Colombia'),
+    _lb('RGPD / GDPR — Unión Europea'),
+    _lb('CCPA — California, USA'),
+    _lb('LGPD — Brasil'),
+    _lb('ISO/IEC 27001 — Seguridad de la información'),
+    _lh('3. Datos que recopilamos'),
+    _lb('Nombre, correo, país, moneda y salario configurado'),
+    _lb('Productos, materiales, costos y plan de suscripción'),
+    _lb('NO recopilamos datos de tarjetas, biométricos ni de menores'),
+    _lh('4. Finalidades'),
+    _lp('Gestionar tu cuenta, prestar el servicio de costeo, gestionar suscripciones y garantizar la seguridad. No usamos tus datos para publicidad.'),
+    _lh('5. Seguridad'),
+    _lb('Cifrado TLS 1.3 en todas las comunicaciones'),
+    _lb('Autenticación JWT firmada por Supabase'),
+    _lb('Row Level Security: cada usuario solo accede a sus datos'),
+    _lb('Contraseñas con hash bcrypt — nunca almacenamos tu contraseña'),
+    _lh('6. Tus derechos'),
+    _lp('Tienes derecho de acceso, rectificación, supresión, portabilidad y oposición. Escríbenos a privacidad@tarius.com. Respondemos en 15 días hábiles.'),
+    _lh('7. Menores de edad'),
+    _lp('Valora es exclusivamente para mayores de 18 años.'),
+    _lh('8. Contacto'),
+    _lp('privacidad@tarius.com · © 2026 TARIUS S.A.S'),
+    const SizedBox(height: 40),
+  ];
+
+  Widget _lh(String t) => Padding(
+    padding: const EdgeInsets.only(top: 16, bottom: 6),
+    child: Text(t, style: const TextStyle(
+        fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.primary)),
+  );
+
+  Widget _lp(String t) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(t, style: const TextStyle(
+        fontSize: 13, color: AppColors.textSecondary, height: 1.6)),
+  );
+
+  Widget _lb(String t) => Padding(
+    padding: const EdgeInsets.only(left: 12, bottom: 6),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('• ', style: TextStyle(
+            fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w700)),
+        Expanded(child: Text(t, style: const TextStyle(
+            fontSize: 13, color: AppColors.textSecondary, height: 1.5))),
+      ],
+    ),
+  );
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCountry == null) {
@@ -553,23 +684,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             const SizedBox(width: 4),
                             Expanded(
-                              child: RichText(
-                                text: const TextSpan(
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary,
+                              child: Wrap(
+                                children: [
+                                  const Text(
+                                    'Acepto los ',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary),
                                   ),
-                                  children: [
-                                    TextSpan(text: AppStrings.terms),
-                                    TextSpan(
-                                      text: AppStrings.termsLink,
+                                  GestureDetector(
+                                    onTap: () => _showLegal(context, isTerms: true),
+                                    child: const Text(
+                                      'Términos y condiciones',
                                       style: TextStyle(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                          fontSize: 12,
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.w600,
+                                          decoration: TextDecoration.underline),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  const Text(
+                                    ' y la ',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () => _showLegal(context, isTerms: false),
+                                    child: const Text(
+                                      'Política de privacidad',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.w600,
+                                          decoration: TextDecoration.underline),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],

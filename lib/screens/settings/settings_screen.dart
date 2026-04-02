@@ -5,6 +5,7 @@ import '../../core/l10n.dart';
 import '../../repositories/auth_repository.dart';
 import '../../services/lang_service.dart';
 import '../../services/subscription_service.dart';
+import '../legal/legal_screen.dart';
 import '../subscription/paywall_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -437,8 +438,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _SettingsTile(
             icon: Icons.privacy_tip_outlined,
             title: t.privacyPolicy,
-            subtitle: 'valora.app/privacy',
-            onTap: () {},
+            subtitle: 'Ver política completa',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const LegalScreen(type: LegalType.privacy),
+              ),
+            ),
+          ),
+
+          _SettingsTile(
+            icon: Icons.gavel_outlined,
+            title: 'Términos y condiciones',
+            subtitle: 'Ver términos completos',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const LegalScreen(type: LegalType.terms),
+              ),
+            ),
           ),
 
           const SizedBox(height: 20),

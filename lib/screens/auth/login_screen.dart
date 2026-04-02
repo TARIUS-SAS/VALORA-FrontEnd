@@ -4,7 +4,7 @@ import '../../core/constants.dart';
 import '../../repositories/auth_repository.dart';
 import '../../widgets/auth_widgets.dart';
 import '../../widgets/custom_button.dart';
-import 'register_screen.dart';
+import '../../screens/auth/register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -186,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       GestureDetector(
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                          MaterialPageRoute(builder: (_) => RegisterScreen()),
                         ),
                         child: const Text(AppStrings.signUpLink,
                             style: TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w700)),
