@@ -4,7 +4,7 @@ import '../../core/constants.dart';
 import '../../repositories/auth_repository.dart';
 import '../../widgets/auth_widgets.dart';
 import '../../widgets/custom_button.dart';
-import '../../screens/auth/register_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,8 +18,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl  = TextEditingController();
   final _passFocus = FocusNode();
-  bool _loading    = false;
-  bool _obscure    = true;
+  bool _loading       = false;
+  bool _googleLoading = false;
+  bool _obscure       = true;
 
   @override
   void dispose() {
@@ -27,6 +28,20 @@ class _LoginScreenState extends State<LoginScreen> {
     _passCtrl.dispose();
     _passFocus.dispose();
     super.dispose();
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _googleLoading = true);
+    try {
+      await _repo.signInWithGoogle();
+      if (mounted) Navigator.pushReplacementNamed(context, '/home');
+    } catch (e) {
+      final msg = e.toString();
+      if (msg.contains('cancelado') || msg.contains('canceled')) return;
+      if (mounted) _snack('Error al ingresar con Google. Intenta de nuevo.', isError: true);
+    } finally {
+      if (mounted) setState(() => _googleLoading = false);
+    }
   }
 
   Future<void> _login() async {
@@ -164,14 +179,35 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
 
                         OutlinedButton(
-                          onPressed: () {},
+                          onPressed: _loading ? null : _loginWithGoogle,
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: AppColors.border, width: 1.2),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             minimumSize: const Size(double.infinity, 50),
                           ),
-                          child: const Text('Continuar con Google',
-                              style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                          child: _googleLoading
+                              ? const SizedBox(
+                                  width: 20, height: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: AppColors.primary),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.network(
+                                      'https://www.google.com/favicon.ico',
+                                      width: 18, height: 18,
+                                      errorBuilder: (_, __, ___) =>
+                                          const Icon(Icons.g_mobiledata,
+                                              size: 20, color: AppColors.primary),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    const Text('Continuar con Google',
+                                        style: TextStyle(
+                                            color: AppColors.textPrimary,
+                                            fontSize: 14)),
+                                  ],
+                                ),
                         ),
                       ],
                     ),
