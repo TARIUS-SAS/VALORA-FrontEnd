@@ -33,8 +33,15 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _loginWithGoogle() async {
     setState(() => _googleLoading = true);
     try {
-      await _repo.signInWithGoogle();
-      if (mounted) Navigator.pushReplacementNamed(context, '/home');
+      final isNewUser = await _repo.signInWithGoogle();
+      if (!mounted) return;
+      if (isNewUser) {
+        // Usuario nuevo → pantalla de configuración de país y medidas
+        Navigator.of(context).pushReplacementNamed('/google_setup');
+      } else {
+        // Usuario existente → home directo
+        Navigator.pushReplacementNamed(context, '/home');
+      }
     } catch (e) {
       final msg = e.toString();
       if (msg.contains('cancelado') || msg.contains('canceled')) return;

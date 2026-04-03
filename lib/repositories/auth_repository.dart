@@ -21,48 +21,51 @@ class AuthRepository {
     scopes: ['email', 'profile'],
   );
 
-  Future<AuthResponse> signInWithGoogle() async {
+  // Retorna true si es usuario nuevo (para mostrar pantalla de configuración)
+  Future<bool> signInWithGoogle() async {
     try {
-      // 1. Abrir selector de cuenta de Google
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null)
         throw Exception('Inicio cancelado por el usuario');
 
-      // 2. Obtener tokens de autenticación
       final googleAuth = await googleUser.authentication;
       final idToken = googleAuth.idToken;
       if (idToken == null)
         throw Exception('No se pudo obtener el token de Google');
 
-      // 3. Autenticar en Supabase con el token de Google
       final res = await _client.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: idToken,
         accessToken: googleAuth.accessToken,
       );
 
-      // 4. Sincronizar el perfil si es usuario nuevo
-      await _ensureProfile(res.user);
-
-      return res;
+      final isNew = await _ensureProfile(res.user);
+      return isNew;
     } catch (e) {
       debugPrint('Error Google Sign-In: $e');
       rethrow;
     }
   }
 
-  // Crea el perfil en Supabase si no existe (usuarios nuevos con Google)
-  Future<void> _ensureProfile(User? user) async {
-    if (user == null) return;
+  // Retorna true si necesita configurar país (usuario nuevo O sin país)
+  Future<bool> _ensureProfile(User? user) async {
+    if (user == null) return false;
     try {
+      final config = await _client
+          .from('config_app')
+          .select('value')
+          .eq('key', 'trial_hours')
+          .maybeSingle();
+      final trialHours = int.tryParse(config?['value'] ?? '12') ?? 12;
+
       final existing = await _client
           .from('profiles')
-          .select('id')
+          .select('id, country_code')
           .eq('id', user.id)
           .maybeSingle();
 
       if (existing == null) {
-        // Usuario nuevo — crear perfil con valores por defecto
+        // Usuario nuevo — crear perfil
         await _client.from('profiles').insert({
           'id': user.id,
           'full_name':
@@ -71,13 +74,22 @@ class AuthRepository {
               '',
           'plan': 'trial',
           'trial_started_at': DateTime.now().toIso8601String(),
-          'trial_hours': 12,
+          'trial_hours': trialHours,
         });
+        return true; // nuevo → mostrar setup
+      }
+
+      // Usuario existente — mostrar setup si no tiene país configurado
+      final countryCode = existing['country_code'] as String? ?? '';
+      if (countryCode.isEmpty) {
+        return true; // sin país → mostrar setup
       }
 
       await _syncFromProfile();
+      return false; // tiene país → ir al home
     } catch (e) {
       debugPrint('Error al crear perfil Google: $e');
+      return false;
     }
   }
 
