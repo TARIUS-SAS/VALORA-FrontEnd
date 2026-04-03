@@ -16,7 +16,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  final _authRepo    = AuthRepository();
+  final _authRepo = AuthRepository();
   final _productRepo = ProductRepository();
 
   List<Product> _products = [];
@@ -45,8 +45,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _checkAccess() async {
     try {
-      final status = await SubscriptionService().refresh()
-          .timeout(const Duration(seconds: 8));
+      final status = await SubscriptionService().refresh().timeout(
+        const Duration(seconds: 8),
+      );
       if (!mounted) return;
       if (!status.hasAccess) _goPaywall();
     } catch (_) {
@@ -57,10 +58,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final status = await SubscriptionService().refresh()
-          .timeout(const Duration(seconds: 8));
+      final status = await SubscriptionService().refresh().timeout(
+        const Duration(seconds: 8),
+      );
 
-      debugPrint('=== ACCESO: ${status.hasAccess} | PLAN: ${status.plan} | MINUTOS: ${status.minutesLeft}');
+      debugPrint(
+        '=== ACCESO: ${status.hasAccess} | PLAN: ${status.plan} | MINUTOS: ${status.minutesLeft}',
+      );
 
       if (!mounted) return;
       if (!status.hasAccess) {
@@ -72,7 +76,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final list = await _productRepo.getAll(_authRepo.currentUser!.id);
       debugPrint('=== PRODUCTOS CARGADOS: ${list.length}');
       if (mounted) setState(() => _products = list);
-
     } on TrialExpiredException {
       debugPrint('=== TrialExpiredException → PAYWALL');
       if (mounted) _goPaywall();
@@ -101,10 +104,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         title: const Text('Eliminar producto'),
         content: Text('¿Eliminar "${p.name}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Eliminar', style: TextStyle(color: AppColors.error)),
+            child: const Text(
+              'Eliminar',
+              style: TextStyle(color: AppColors.error),
+            ),
           ),
         ],
       ),
@@ -115,8 +124,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _err(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: AppColors.error),
-      );
+    SnackBar(content: Text(msg), backgroundColor: AppColors.error),
+  );
 
   void _goCreate({Product? product}) async {
     await Navigator.push(
@@ -134,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text(AppStrings.appName),
+        title: _LogosHeader(),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -158,15 +167,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: Row(
               children: [
                 Container(
-                  width: 42, height: 42,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [AppColors.primary, Color(0xFF6B6BE8)]),
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primary, Color(0xFF6B6BE8)],
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
                     child: Text(
                       name.isNotEmpty ? name[0].toUpperCase() : 'U',
-                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -175,10 +191,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(name,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                      Text(user?.email ?? '',
-                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        user?.email ?? '',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -191,22 +218,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           // ── Lista ─────────────────────────────────────────────
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  )
                 : _products.isEmpty
-                    ? _EmptyState(onAdd: _goCreate)
-                    : RefreshIndicator(
-                        onRefresh: _load,
-                        color: AppColors.primary,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _products.length,
-                          itemBuilder: (_, i) => _ProductTile(
-                            product: _products[i],
-                            onTap: () => _goCreate(product: _products[i]),
-                            onDelete: () => _delete(_products[i]),
-                          ),
-                        ),
+                ? _EmptyState(onAdd: _goCreate)
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    color: AppColors.primary,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _products.length,
+                      itemBuilder: (_, i) => _ProductTile(
+                        product: _products[i],
+                        onTap: () => _goCreate(product: _products[i]),
+                        onDelete: () => _delete(_products[i]),
                       ),
+                    ),
+                  ),
           ),
         ],
       ),
@@ -214,8 +243,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         onPressed: _goCreate,
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Nuevo producto',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        label: const Text(
+          'Nuevo producto',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }
@@ -252,8 +283,14 @@ class _PlanBadge extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: color.withOpacity(0.3)),
         ),
-        child: Text(label,
-            style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
@@ -272,11 +309,11 @@ class _ProductTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final total     = product.totalCost ?? 0;
+    final total = product.totalCost ?? 0;
     final suggested = product.suggestedPrice ?? 0;
-    final profit    = product.profitAmount;
-    final pct       = product.profitPct ?? 0;
-    final hasData   = suggested > 0;
+    final profit = product.profitAmount;
+    final pct = product.profitPct ?? 0;
+    final hasData = suggested > 0;
 
     return GestureDetector(
       onTap: onTap,
@@ -287,7 +324,11 @@ class _ProductTile extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
         child: Column(
@@ -296,31 +337,51 @@ class _ProductTile extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  width: 38, height: 38,
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 18),
+                  child: const Icon(
+                    Icons.inventory_2_outlined,
+                    color: AppColors.primary,
+                    size: 18,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(product.name,
+                      Text(
+                        product.name,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      if (product.description != null &&
+                          product.description!.isNotEmpty)
+                        Text(
+                          product.description!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                      if (product.description != null && product.description!.isNotEmpty)
-                        Text(product.description!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.textHint),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: AppColors.textHint,
+                  ),
                   onPressed: onDelete,
                 ),
               ],
@@ -332,12 +393,26 @@ class _ProductTile extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  _Stat('Costo total', '\$${total.toStringAsFixed(2)}', AppColors.textSecondary),
-                  _Stat('Precio sugerido', '\$${suggested.toStringAsFixed(2)}', AppColors.primary),
-                  _Stat('Ganancia', '\$${profit.toStringAsFixed(2)}',
-                      profit >= 0 ? AppColors.accent : AppColors.error),
-                  _Stat('Margen', '${pct.toStringAsFixed(0)}%',
-                      profit >= 0 ? AppColors.accentDark : AppColors.error),
+                  _Stat(
+                    'Costo total',
+                    '\$${total.toStringAsFixed(2)}',
+                    AppColors.textSecondary,
+                  ),
+                  _Stat(
+                    'Precio sugerido',
+                    '\$${suggested.toStringAsFixed(2)}',
+                    AppColors.primary,
+                  ),
+                  _Stat(
+                    'Ganancia',
+                    '\$${profit.toStringAsFixed(2)}',
+                    profit >= 0 ? AppColors.accent : AppColors.error,
+                  ),
+                  _Stat(
+                    'Margen',
+                    '${pct.toStringAsFixed(0)}%',
+                    profit >= 0 ? AppColors.accentDark : AppColors.error,
+                  ),
                 ],
               ),
             ] else ...[
@@ -346,8 +421,10 @@ class _ProductTile extends StatelessWidget {
                 children: [
                   Icon(Icons.info_outline, size: 13, color: AppColors.textHint),
                   SizedBox(width: 6),
-                  Text('Toca para agregar materiales y calcular precio',
-                      style: TextStyle(fontSize: 11, color: AppColors.textHint)),
+                  Text(
+                    'Toca para agregar materiales y calcular precio',
+                    style: TextStyle(fontSize: 11, color: AppColors.textHint),
+                  ),
                 ],
               ),
             ],
@@ -361,20 +438,28 @@ class _ProductTile extends StatelessWidget {
 class _Stat extends StatelessWidget {
   const _Stat(this.label, this.value, this.color);
   final String label, value;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) => Expanded(
-        child: Column(
-          children: [
-            Text(value,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
-            Text(label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-          ],
+    child: Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
         ),
-      );
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+        ),
+      ],
+    ),
+  );
 }
 
 class _EmptyState extends StatelessWidget {
@@ -383,24 +468,119 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.inventory_2_outlined, size: 64, color: AppColors.textHint),
-            const SizedBox(height: 16),
-            const Text('Sin productos aún',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-            const SizedBox(height: 8),
-            const Text('Crea tu primer producto para comenzar a costear',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add),
-              label: const Text('Crear producto'),
-              style: ElevatedButton.styleFrom(minimumSize: const Size(200, 48)),
-            ),
-          ],
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.inventory_2_outlined, size: 64, color: AppColors.textHint),
+        const SizedBox(height: 16),
+        const Text(
+          'Sin productos aún',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
         ),
-      );
+        const SizedBox(height: 8),
+        const Text(
+          'Crea tu primer producto para comenzar a costear',
+          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton.icon(
+          onPressed: onAdd,
+          icon: const Icon(Icons.add),
+          label: const Text('Crear producto'),
+          style: ElevatedButton.styleFrom(minimumSize: const Size(200, 48)),
+        ),
+      ],
+    ),
+  );
+}
+
+// ── Header con logos en el AppBar ────────────────────────────
+class _LogosHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Valora en Arial bold azul
+        const Text(
+          'Valora',
+          style: TextStyle(
+            fontFamily: 'Arial',
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: AppColors.primary,
+            letterSpacing: 1.5,
+          ),
+        ),
+        // Separador ×
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8),
+          child: Text(
+            'X',
+            style: TextStyle(
+              fontSize: 16,
+              color: Color.fromARGB(255, 0, 0, 0),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        // Ginelly en cursiva morado
+        const Text(
+          'Ginelly\n   Ginelly',
+          style: TextStyle(
+            fontFamily: 'Georgia',
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            fontStyle: FontStyle.italic,
+            color: Color(0xFF6B21A8),
+            letterSpacing: 1,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LogoImage extends StatelessWidget {
+  final String assetPath;
+  final String fallbackText;
+  final Color fallbackColor;
+
+  const _LogoImage({
+    required this.assetPath,
+    required this.fallbackText,
+    required this.fallbackColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: Image.asset(
+        assetPath,
+        height: 32,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: fallbackColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: fallbackColor.withOpacity(0.3)),
+          ),
+          child: Text(
+            fallbackText,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: fallbackColor,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
